@@ -1,0 +1,22 @@
+{
+    "name": "Rastreo Bus - Ruta 15",
+    "short_name": "Rastreo Bus",
+    "start_url": "/index.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#1e3a8a",
+    "description": "Una aplicación para rastrear la Ruta 15 de buses.",
+    "icons": [
+      {
+        "src": "/icon-192x192.png",
+        "type": "image/png",
+        "sizes": "192x192"
+      },
+      {
+        "src": "/icon-512x512.png",
+        "type": "image/png",
+        "sizes": "512x512"
+      }
+    ]
+  }
+  

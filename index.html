@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rastreo Bus - Ruta 15</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        body {
+            overscroll-behavior-y: contain;
+        }
+        #map {
+            height: calc(100vh - 64px);
+        }
+        @media (max-width: 640px) {
+            #map {
+                height: calc(100vh - 112px);
+            }
+        }
+        .overlay-control {
+            position: absolute;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .mobile-tab-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <nav id="navbar" class="bg-blue-600 p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-white text-xl md:text-2xl font-bold">Rastreo Bus - Ruta 15</h1>
+            <div id="authButtons" class="hidden">
+                <button id="loginBtn" class="bg-white text-blue-600 px-4 py-2 rounded-full text-sm font-semibold hover:bg-blue-100 transition duration-300">Iniciar Sesión</button>
+                <button id="registerBtn" class="bg-green-500 text-white px-4 py-2 rounded-full text-sm font-semibold ml-2 hover:bg-green-600 transition duration-300">Registrarse</button>
+            </div>
+            <div id="userInfo" class="hidden">
+                <span id="userEmail" class="text-white mr-2 text-sm"></span>
+                <button id="logoutBtn" class="bg-red-500 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-red-600 transition duration-300">Cerrar Sesión</button>
+            </div>
+        </div>
+    </nav>
+
+    <div id="roleSelection" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-2xl shadow-xl text-center w-11/12 max-w-md">
+            <h2 class="text-3xl font-bold mb-6">¿Eres conductor o usuario?</h2>
+            <button id="driverBtn" class="w-full bg-blue-500 text-white px-6 py-3 rounded-full text-lg font-semibold mb-4 hover:bg-blue-600 transition duration-300">Soy Conductor</button>
+            <button id="userBtn" class="w-full bg-green-500 text-white px-6 py-3 rounded-full text-lg font-semibold hover:bg-green-600 transition duration-300">Soy Usuario</button>
+        </div>
+    </div>
+
+    <div id="mapContainer" class="hidden relative">
+        <div id="map" class="w-full"></div>
+        <div id="driverControls" class="hidden overlay-control left-4 bottom-20 sm:bottom-4">
+            <button id="shareLocationBtn" class="bg-green-500 text-white px-4 py-2 rounded-full font-semibold shadow-lg hover:bg-green-600 transition duration-300">Compartir Ubicación</button>
+        </div>
+        <div id="busInfo" class="overlay-control right-4 top-4">
+            <h2 class="text-lg font-bold mb-2">Información de Buses</h2>
+            <p id="activeBuses" class="text-sm">Buses activos: 0</p>
+        </div>
+    </div>
+
+    <div id="mobileTabBar" class="mobile-tab-bar hidden sm:hidden">
+        <div class="flex justify-around items-center h-14">
+            <button id="mapTab" class="flex-1 text-center py-2 text-blue-600 font-semibold">Mapa</button>
+            <button id="infoTab" class="flex-1 text-center py-2 text-gray-600 font-semibold">Info</button>
+        </div>
+    </div>
+
+    <!-- Modal de Registro -->
+    <div id="registerModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-11/12 max-w-md mx-4">
+            <h2 class="text-2xl font-bold mb-6">Registro de Conductor</h2>
+            <input id="regEmail" type="email" placeholder="Correo Electrónico" class="w-full p-3 mb-4 border rounded-lg">
+            <input id="regPassword" type="password" placeholder="Contraseña" class="w-full p-3 mb-6 border rounded-lg">
+            <button id="regSubmit" class="w-full bg-blue-500 text-white p-3 rounded-lg font-semibold hover:bg-blue-600 transition duration-300">Registrarse</button>
+            <button id="regClose" class="w-full mt-4 bg-gray-300 text-gray-800 p-3 rounded-lg font-semibold hover:bg-gray-400 transition duration-300">Cerrar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Inicio de Sesión -->
+    <div id="loginModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-11/12 max-w-md mx-4">
+            <h2 class="text-2xl font-bold mb-6">Iniciar Sesión</h2>
+            <input id="loginEmail" type="email" placeholder="Correo Electrónico" class="w-full p-3 mb-4 border rounded-lg">
+            <input id="loginPassword" type="password" placeholder="Contraseña" class="w-full p-3 mb-6 border rounded-lg">
+            <button id="loginSubmit" class="w-full bg-blue-500 text-white p-3 rounded-lg font-semibold hover:bg-blue-600 transition duration-300">Iniciar Sesión</button>
+            <button id="loginClose" class="w-full mt-4 bg-gray-300 text-gray-800 p-3 rounded-lg font-semibold hover:bg-gray-400 transition duration-300">Cerrar</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCE2DEInNal6VIEk8rW7oluVKV3Mv9e-TQ",
+            authDomain: "gps-89685.firebaseapp.com",
+            projectId: "gps-89685",
+            storageBucket: "gps-89685.appspot.com",
+            messagingSenderId: "850380730343",
+            appId: "1:850380730343:web:35d065df67b39ef7b81742"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        let map, markers = {}, isSharing = false, watchId = null;
+        let userRole = localStorage.getItem('userRole');
+
+        function initMap() {
+            map = L.map('map').setView([13.7942, -88.8965], 8); // Coordenadas de El Salvador
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        function showMap() {
+            document.getElementById('mapContainer').classList.remove('hidden');
+            document.getElementById('mobileTabBar').classList.remove('hidden');
+            initMap();
+            loadBusLocations();
+        }
+
+        function setUserRole(role) {
+            userRole = role;
+            localStorage.setItem('userRole', role);
+            document.getElementById('roleSelection').classList.add('hidden');
+            
+            if (role === 'driver') {
+                document.getElementById('authButtons').classList.remove('hidden');
+            } else {
+                showMap();
+            }
+        }
+
+        // Funciones de autenticación
+        function showRegisterModal() {
+            document.getElementById('registerModal').style.display = 'flex';
+        }
+
+        function hideRegisterModal() {
+            document.getElementById('registerModal').style.display = 'none';
+        }
+
+        function showLoginModal() {
+            document.getElementById('loginModal').style.display = 'flex';
+        }
+
+        function hideLoginModal() {
+            document.getElementById('loginModal').style.display = 'none';
+        }
+
+        function register() {
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    hideRegisterModal();
+                    alert('Registro exitoso');
+                })
+                .catch((error) => {
+                    alert('Error en el registro: ' + error.message);
+                });
+        }
+
+        function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    hideLoginModal();
+                })
+                .catch((error) => {
+                    alert('Error en el inicio de sesión: ' + error.message);
+                });
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                document.getElementById('userInfo').classList.add('hidden');
+                document.getElementById('authButtons').classList.remove('hidden');
+                document.getElementById('driverControls').classList.add('hidden');
+                stopSharingLocation();
+            }).catch((error) => {
+                console.error('Error al cerrar sesión:', error);
+            });
+        }
+
+        // Funciones de compartir ubicación
+        function startSharingLocation() {
+            if ("geolocation" in navigator) {
+                watchId = navigator.geolocation.watchPosition(updateLocation, handleLocationError, {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 5000
+                });
+                isSharing = true;
+                document.getElementById('shareLocationBtn').textContent = 'Dejar de Compartir';
+                document.getElementById('shareLocationBtn').classList.replace('bg-green-500', 'bg-red-500');
+                document.getElementById('shareLocationBtn').classList.replace('hover:bg-green-600', 'hover:bg-red-600');
+            } else {
+                alert("Tu navegador no soporta geolocalización.");
+            }
+        }
+
+        function stopSharingLocation() {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+            if (auth.currentUser) {
+                database.ref('buses/' + auth.currentUser.uid).remove();
+            }
+            isSharing = false;
+            document.getElementById('shareLocationBtn').textContent = 'Compartir Ubicación';
+            document.getElementById('shareLocationBtn').classList.replace('bg-red-500', 'bg-green-500');
+            document.getElementById('shareLocationBtn').classList.replace('hover:bg-red-600', 'hover:bg-green-600');
+        }
+
+        function updateLocation(position) {
+            const { latitude, longitude } = position.coords;
+            if (auth.currentUser) {
+                database.ref('buses/' + auth.currentUser.uid).set({
+                    latitude,
+                    longitude,
+                    timestamp: Date.now()
+                });
+            }
+        }
+
+        function handleLocationError(error) {
+            console.error("Error al obtener la ubicación:", error);
+            alert("No se pudo obtener tu ubicación. Por favor, verifica los permisos de tu navegador.");
+        }
+
+        function loadBusLocations() {
+            const busIcon = L.icon({
+                iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
+                iconSize: [32, 32],
+                iconAnchor: [16, 32],
+                popupAnchor: [0, -32]
+            });
+
+            database.ref('buses').on('value', (snapshot) => {
+                const buses = snapshot.val();
+                
+                Object.entries(buses || {}).forEach(([id, data]) => {
+                    const { latitude, longitude } = data;
+                    if (markers[id]) {
+                        markers[id].setLatLng([latitude, longitude]);
+                    } else {
+                        markers[id] = L.marker([latitude, longitude], {icon: busIcon})
+                            .addTo(map)
+                            .bindPopup('Bus de la Ruta 15');
+                    }
+                });
+
+                // Remover marcadores de buses que ya no están activos
+                Object.keys(markers).forEach(id => {
+                    if (!buses || !buses[id]) {
+                        map.removeLayer(markers[id]);
+                        delete markers[id];
+                    }
+                });
+
+                document.getElementById('activeBuses').textContent = `Buses activos: ${Object.keys(buses || {}).length}`;
+            });
+        }
+
+        // Function to handle background sharing using Service Workers (where supported)
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js').then(function (registration) {
+        console.log('Service Worker registered with scope:', registration.scope);
+    }).catch(function (error) {
+        console.log('Service Worker registration failed:', error);
+    });
+}
+
+// Background location sharing
+async function startSharingLocationInBackground() {
+    if (navigator.permissions) {
+        const status = await navigator.permissions.query({ name: 'geolocation' });
+        if (status.state === 'granted' || status.state === 'prompt') {
+            startSharingLocation();
+        } else {
+            console.log("Geolocation permission denied. Location sharing cannot continue.");
+        }
+    }
+}
+
+// Start location sharing in the background automatically
+if (userRole === 'driver' && auth.currentUser) {
+    startSharingLocationInBackground();
+}
+
+// Example Service Worker (service-worker.js)
+// This file handles background functionality in supported browsers
+self.addEventListener('install', (event) => {
+    console.log('Service Worker installing.');
+});
+
+self.addEventListener('activate', (event) => {
+    console.log('Service Worker activated.');
+});
+
+self.addEventListener('fetch', (event) => {
+    console.log('Service Worker fetching:', event.request.url);
+});
+
+        // Event Listeners
+        document.getElementById('driverBtn').addEventListener('click', () => setUserRole('driver'));
+        document.getElementById('userBtn').addEventListener('click', () => setUserRole('user'));
+        document.getElementById('registerBtn').addEventListener('click', showRegisterModal);
+        document.getElementById('loginBtn').addEventListener('click', showLoginModal);
+        document.getElementById('regClose').addEventListener('click', hideRegisterModal);
+        document.getElementById('loginClose').addEventListener('click', hideLoginModal);
+        document.getElementById('regSubmit').addEventListener('click', register);
+        document.getElementById('loginSubmit').addEventListener('click', login);
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        document.getElementById('shareLocationBtn').addEventListener('click', () => {
+            if (isSharing) {
+                stopSharingLocation();
+            } else {
+                startSharingLocation();
+            }
+        });
+
+        // Observer de autenticación
+        auth.onAuthStateChanged((user) => {
+            if (user && userRole === 'driver') {
+                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('userInfo').classList.remove('hidden');
+                document.getElementById('authButtons').classList.add('hidden');
+                document.getElementById('driverControls').classList.remove('hidden');
+                showMap();
+            } else if (userRole === 'driver') {
+                document.getElementById('userInfo').classList.add('hidden');
+                document.getElementById('authButtons').classList.remove('hidden');
+                document.getElementById('driverControls').classList.add('hidden');
+            }
+        });
+
+        // Inicialización
+        if (userRole) {
+            document.getElementById('roleSelection').classList.add('hidden');
+            if (userRole === 'user') {
+                showMap();
+            } else {
+                document.getElementById('authButtons').classList.remove('hidden');
+            }
+        }
+
+        // Ajustar el tamaño del mapa cuando cambia el tamaño de la ventana
+        window.addEventListener('resize', () => {
+            if (map) map.invalidateSize();
+        });
+    </script>
+</body>
+</html>

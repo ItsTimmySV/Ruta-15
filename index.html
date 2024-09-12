@@ -134,25 +134,33 @@
         }
 
         function showMap() {
-            document.getElementById('mapContainer').classList.remove('hidden');
-            document.getElementById('mobileTabBar').classList.remove('hidden');
-            initMap();
-            loadBusLocations();
-        }
+    document.getElementById('mapContainer').classList.remove('hidden');
+    document.getElementById('mobileTabBar').classList.remove('hidden');
+    document.getElementById('exitBtnContainer').classList.remove('hidden'); // Mostrar el botón de salir
+
+    initMap(); // Inicializar el mapa solo si es necesario
+    loadBusLocations(); // Cargar la ubicación de los buses
+}
+
 
         function setUserRole(role) {
     userRole = role;
     localStorage.setItem('userRole', role);
     document.getElementById('roleSelection').classList.add('hidden');
-    
+
+    // Resetear la interfaz
+    document.getElementById('mapContainer').classList.add('hidden');
+    document.getElementById('exitBtnContainer').classList.add('hidden');
+    document.getElementById('mobileTabBar').classList.add('hidden');
+
     if (role === 'driver') {
         document.getElementById('authButtons').classList.remove('hidden');
-        document.getElementById('exitBtnContainer').classList.add('hidden'); // Ocultar el botón salir
     } else if (role === 'user') {
         showMap();
         document.getElementById('exitBtnContainer').classList.remove('hidden'); // Mostrar el botón de salir para usuarios
     }
 }
+
 
 
 
@@ -164,6 +172,7 @@ document.getElementById('exitBtn').addEventListener('click', () => {
     document.getElementById('mobileTabBar').classList.add('hidden');
     document.getElementById('roleSelection').classList.remove('hidden'); // Volver a mostrar la selección de rol
 });
+
 
 
 
@@ -378,12 +387,19 @@ self.addEventListener('fetch', (event) => {
     document.getElementById('roleSelection').classList.add('hidden');
     if (userRole === 'user') {
         showMap();
-        document.getElementById('exitBtnContainer').classList.remove('hidden');  // Asegurar que el botón de salir esté visible
+        document.getElementById('exitBtnContainer').classList.remove('hidden');  // Mostrar botón de salir si es usuario
     } else if (userRole === 'driver') {
         document.getElementById('authButtons').classList.remove('hidden');
         document.getElementById('exitBtnContainer').classList.add('hidden');  // Ocultar botón salir para conductores
     }
+} else {
+    // Resetear la interfaz si no hay rol seleccionado
+    document.getElementById('roleSelection').classList.remove('hidden');
+    document.getElementById('mapContainer').classList.add('hidden');
+    document.getElementById('exitBtnContainer').classList.add('hidden');
+    document.getElementById('mobileTabBar').classList.add('hidden');
 }
+
 
 
 

@@ -147,11 +147,13 @@
     
     if (role === 'driver') {
         document.getElementById('authButtons').classList.remove('hidden');
+        document.getElementById('exitBtnContainer').classList.add('hidden'); // Ocultar el botón salir
     } else {
         showMap();
-        document.getElementById('exitBtnContainer').classList.remove('hidden'); // Mostrar el botón de Salir para usuarios
+        document.getElementById('exitBtnContainer').classList.remove('hidden'); // Mostrar el botón de salir para usuarios
     }
 }
+
 
 document.getElementById('exitBtn').addEventListener('click', () => {
     userRole = null;
@@ -161,6 +163,7 @@ document.getElementById('exitBtn').addEventListener('click', () => {
     document.getElementById('mobileTabBar').classList.add('hidden');
     document.getElementById('roleSelection').classList.remove('hidden'); // Volver a mostrar la selección de rol
 });
+
 
         // Funciones de autenticación
         function showRegisterModal() {
@@ -375,10 +378,12 @@ self.addEventListener('fetch', (event) => {
     if (userRole === 'user') {
         showMap();
         document.getElementById('exitBtnContainer').classList.remove('hidden');  // Mostrar botón de salir si es usuario
-    } else {
+    } else if (userRole === 'driver') {
         document.getElementById('authButtons').classList.remove('hidden');
+        document.getElementById('exitBtnContainer').classList.add('hidden');  // Ocultar botón salir para conductores
     }
 }
+
 
 
         // Ajustar el tamaño del mapa cuando cambia el tamaño de la ventana

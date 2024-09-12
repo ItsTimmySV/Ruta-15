@@ -1,7 +1,7 @@
 {
     "name": "Rastreo Bus - Ruta 15",
     "short_name": "Rastreo Bus",
-    "start_url": "/Ruta-15/",
+    "start_url": "/index.html",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#1e3a8a",

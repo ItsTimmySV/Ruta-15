@@ -18,8 +18,12 @@
             overscroll-behavior-y: contain;
         }
         #map {
-            height: calc(100vh - 64px);
-        }
+    width: 100%;
+    height: 100vh; /* Asegura que ocupe toda la pantalla */
+    margin: 0;
+    padding: 0;
+}
+
         @media (max-width: 640px) {
             #map {
                 height: calc(100vh - 112px);
@@ -129,51 +133,73 @@
         let userRole = localStorage.getItem('userRole');
 
         function initMap() {
-            map = L.map('map').setView([13.7942, -88.8965], 8); // Coordenadas de El Salvador
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-        }
+    if (map != null) {
+        map.off(); // Quitar los eventos del mapa anterior
+        map.remove();  // Remover el mapa existente
+    }
+    
+    map = L.map('map').setView([13.7942, -88.8965], 8); // Coordenadas de El Salvador
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-        function showMap() {
+    map.invalidateSize(); // Asegurar que se renderice correctamente después de la inicialización
+
+    loadBusLocations();  // Aseguramos que se recarguen los buses
+}
+
+
+
+
+function showMap() {
+    if (!map) {  // Solo inicializar el mapa si no existe
+        initMap();
+    } else {
+        map.invalidateSize();  // Asegurar que el mapa se redimensione correctamente
+    }
     document.getElementById('mapContainer').classList.remove('hidden');
     document.getElementById('mobileTabBar').classList.remove('hidden');
-    document.getElementById('exitBtnContainer').classList.remove('hidden'); // Mostrar el botón de salir
-
-    initMap(); // Inicializar el mapa solo si es necesario
-    loadBusLocations(); // Cargar la ubicación de los buses
+    loadBusLocations();  // Recargar las ubicaciones si el mapa ya está inicializado
 }
 
 
-        function setUserRole(role) {
-    userRole = role;
-    localStorage.setItem('userRole', role);
-    document.getElementById('roleSelection').classList.add('hidden');
 
-    // Resetear la interfaz
-    document.getElementById('mapContainer').classList.add('hidden');
-    document.getElementById('exitBtnContainer').classList.add('hidden');
-    document.getElementById('mobileTabBar').classList.add('hidden');
 
-    if (role === 'driver') {
-        document.getElementById('authButtons').classList.remove('hidden');
-    } else if (role === 'user') {
-        showMap();
-        document.getElementById('exitBtnContainer').classList.remove('hidden'); // Mostrar el botón de salir para usuarios
+function setUserRole(role) {
+        userRole = role;
+        localStorage.setItem('userRole', role);
+        document.getElementById('roleSelection').classList.add('hidden');
+
+        // Ocultar elementos no necesarios para el conductor
+        document.getElementById('exitBtnContainer').classList.add('hidden');
+        document.getElementById('mapContainer').classList.add('hidden');
+        document.getElementById('mobileTabBar').classList.add('hidden');
+
+        if (role === 'driver') {
+            document.getElementById('authButtons').classList.remove('hidden');
+            document.getElementById('driverControls').classList.remove('hidden');
+        } else if (role === 'user') {
+            showMap();
+            document.getElementById('exitBtnContainer').classList.remove('hidden');
+        }
+
+        location.reload();  // Recargar la página después de seleccionar el rol
     }
-}
 
 
 
 
-document.getElementById('exitBtn').addEventListener('click', () => {
-    userRole = null;
-    localStorage.removeItem('userRole');  // Eliminar el rol guardado en localStorage
-    document.getElementById('mapContainer').classList.add('hidden');
-    document.getElementById('exitBtnContainer').classList.add('hidden');
-    document.getElementById('mobileTabBar').classList.add('hidden');
-    document.getElementById('roleSelection').classList.remove('hidden'); // Volver a mostrar la selección de rol
-});
+
+    document.getElementById('exitBtn').addEventListener('click', () => {
+        userRole = null;
+        localStorage.removeItem('userRole');
+        document.getElementById('mapContainer').classList.add('hidden');
+        document.getElementById('exitBtnContainer').classList.add('hidden');
+        document.getElementById('mobileTabBar').classList.add('hidden');
+        document.getElementById('roleSelection').classList.remove('hidden');
+        location.reload();  // Recargar la página al hacer clic en "Salir"
+    });
+
 
 
 
@@ -196,71 +222,81 @@ document.getElementById('exitBtn').addEventListener('click', () => {
         }
 
         function register() {
-            const email = document.getElementById('regEmail').value;
-            const password = document.getElementById('regPassword').value;
-            auth.createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    hideRegisterModal();
-                    alert('Registro exitoso');
-                })
-                .catch((error) => {
-                    alert('Error en el registro: ' + error.message);
-                });
-        }
+        const email = document.getElementById('regEmail').value;
+        const password = document.getElementById('regPassword').value;
+        auth.createUserWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                hideRegisterModal();
+                alert('Registro exitoso');
+                location.reload();  // Recargar la página después de registrarse
+            })
+            .catch((error) => {
+                alert('Error en el registro: ' + error.message);
+            });
+    }
 
         function login() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    hideLoginModal();
-                })
-                .catch((error) => {
-                    alert('Error en el inicio de sesión: ' + error.message);
-                });
-        }
-
-        function logout() {
-            auth.signOut().then(() => {
-                document.getElementById('userInfo').classList.add('hidden');
-                document.getElementById('authButtons').classList.remove('hidden');
-                document.getElementById('driverControls').classList.add('hidden');
-                stopSharingLocation();
-            }).catch((error) => {
-                console.error('Error al cerrar sesión:', error);
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        auth.signInWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                hideLoginModal();
+                location.reload();  // Recargar la página después de iniciar sesión
+            })
+            .catch((error) => {
+                alert('Error en el inicio de sesión: ' + error.message);
             });
-        }
+    }
 
-        // Funciones de compartir ubicación
-        function startSharingLocation() {
-            if ("geolocation" in navigator) {
-                watchId = navigator.geolocation.watchPosition(updateLocation, handleLocationError, {
-                    enableHighAccuracy: true,
-                    maximumAge: 0,
-                    timeout: 5000
-                });
-                isSharing = true;
-                document.getElementById('shareLocationBtn').textContent = 'Dejar de Compartir';
-                document.getElementById('shareLocationBtn').classList.replace('bg-green-500', 'bg-red-500');
-                document.getElementById('shareLocationBtn').classList.replace('hover:bg-green-600', 'hover:bg-red-600');
-            } else {
-                alert("Tu navegador no soporta geolocalización.");
-            }
-        }
+    function logout() {
+        auth.signOut().then(() => {
+            document.getElementById('userInfo').classList.add('hidden');
+            document.getElementById('authButtons').classList.remove('hidden');
+            document.getElementById('driverControls').classList.add('hidden');
+            stopSharingLocation();
+            document.getElementById('mapContainer').classList.add('hidden');
+            document.getElementById('exitBtnContainer').classList.add('hidden');
+            document.getElementById('mobileTabBar').classList.add('hidden');
+            document.getElementById('roleSelection').classList.remove('hidden');
+            localStorage.removeItem('userRole');
+            location.reload();  // Recargar la página después de cerrar sesión
+        }).catch((error) => {
+            console.error('Error al cerrar sesión:', error);
+        });
+    }
 
-        function stopSharingLocation() {
-            if (watchId !== null) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
-            }
-            if (auth.currentUser) {
-                database.ref('buses/' + auth.currentUser.uid).remove();
-            }
-            isSharing = false;
-            document.getElementById('shareLocationBtn').textContent = 'Compartir Ubicación';
-            document.getElementById('shareLocationBtn').classList.replace('bg-red-500', 'bg-green-500');
-            document.getElementById('shareLocationBtn').classList.replace('hover:bg-red-600', 'hover:bg-green-600');
-        }
+
+function startSharingLocation() {
+    if ("geolocation" in navigator) {
+        watchId = navigator.geolocation.watchPosition(updateLocation, handleLocationError, {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 5000
+        });
+        isSharing = true;
+        localStorage.setItem('isSharing', true); // Guardamos el estado en localStorage
+        document.getElementById('shareLocationBtn').textContent = 'Dejar de Compartir';
+        document.getElementById('shareLocationBtn').classList.replace('bg-green-500', 'bg-red-500');
+        document.getElementById('shareLocationBtn').classList.replace('hover:bg-green-600', 'hover:bg-red-600');
+    } else {
+        alert("Tu navegador no soporta geolocalización.");
+    }
+}
+
+function stopSharingLocation() {
+    if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+    }
+    if (auth.currentUser) {
+        database.ref('buses/' + auth.currentUser.uid).remove();
+    }
+    isSharing = false;
+    localStorage.setItem('isSharing', false); // Actualizamos el valor en localStorage
+    document.getElementById('shareLocationBtn').textContent = 'Compartir Ubicación';
+    document.getElementById('shareLocationBtn').classList.replace('bg-red-500', 'bg-green-500');
+    document.getElementById('shareLocationBtn').classList.replace('hover:bg-red-600', 'hover:bg-green-600');
+}
 
         function updateLocation(position) {
             const { latitude, longitude } = position.coords;
@@ -279,38 +315,39 @@ document.getElementById('exitBtn').addEventListener('click', () => {
         }
 
         function loadBusLocations() {
-            const busIcon = L.icon({
-                iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
-                iconSize: [32, 32],
-                iconAnchor: [16, 32],
-                popupAnchor: [0, -32]
-            });
+    const busIcon = L.icon({
+        iconUrl: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32]
+    });
 
-            database.ref('buses').on('value', (snapshot) => {
-                const buses = snapshot.val();
-                
-                Object.entries(buses || {}).forEach(([id, data]) => {
-                    const { latitude, longitude } = data;
-                    if (markers[id]) {
-                        markers[id].setLatLng([latitude, longitude]);
-                    } else {
-                        markers[id] = L.marker([latitude, longitude], {icon: busIcon})
-                            .addTo(map)
-                            .bindPopup('Bus de la Ruta 15');
-                    }
-                });
+    database.ref('buses').on('value', (snapshot) => {
+        const buses = snapshot.val();
 
-                // Remover marcadores de buses que ya no están activos
-                Object.keys(markers).forEach(id => {
-                    if (!buses || !buses[id]) {
-                        map.removeLayer(markers[id]);
-                        delete markers[id];
-                    }
-                });
+        // Actualizar las ubicaciones de los buses
+        Object.entries(buses || {}).forEach(([id, data]) => {
+            const { latitude, longitude } = data;
+            if (markers[id]) {
+                markers[id].setLatLng([latitude, longitude]);
+            } else {
+                markers[id] = L.marker([latitude, longitude], { icon: busIcon })
+                    .addTo(map)
+                    .bindPopup('Bus de la Ruta 15');
+            }
+        });
 
-                document.getElementById('activeBuses').textContent = `Buses activos: ${Object.keys(buses || {}).length}`;
-            });
-        }
+        // Remover marcadores de buses inactivos
+        Object.keys(markers).forEach(id => {
+            if (!buses || !buses[id]) {
+                map.removeLayer(markers[id]);
+                delete markers[id];
+            }
+        });
+
+        document.getElementById('activeBuses').textContent = `Buses activos: ${Object.keys(buses || {}).length}`;
+    });
+}
 
         // Function to handle background sharing using Service Workers (where supported)
         if ('serviceWorker' in navigator) {
@@ -371,26 +408,45 @@ self.addEventListener('fetch', (event) => {
             }
         });
 
-        // Observer de autenticación
         auth.onAuthStateChanged((user) => {
-            if (user && userRole === 'driver') {
-                document.getElementById('userEmail').textContent = user.email;
-                document.getElementById('userInfo').classList.remove('hidden');
-                document.getElementById('authButtons').classList.add('hidden');
-                document.getElementById('driverControls').classList.remove('hidden');
-                showMap();
-            } else if (userRole === 'driver') {
-                document.getElementById('userInfo').classList.add('hidden');
-                document.getElementById('authButtons').classList.remove('hidden');
-                document.getElementById('driverControls').classList.add('hidden');
-            }
-        });
+    if (user && userRole === 'driver') {
+        document.getElementById('userEmail').textContent = user.email;
+        document.getElementById('userInfo').classList.remove('hidden');
+        document.getElementById('authButtons').classList.add('hidden');
+        document.getElementById('driverControls').classList.remove('hidden');
+        document.getElementById('exitBtnContainer').classList.add('hidden');
+        showMap();
+        checkLocationSharing(); // Verificamos si ya está compartiendo la ubicación
+    } else if (userRole === 'driver') {
+        document.getElementById('userInfo').classList.add('hidden');
+        document.getElementById('authButtons').classList.remove('hidden');
+        document.getElementById('driverControls').classList.add('hidden');
+    }
+});
 
-        if (userRole) {
+function checkLocationSharing() {
+    const sharingStatus = localStorage.getItem('isSharing');
+    if (sharingStatus === 'true') {
+        isSharing = true;
+        document.getElementById('shareLocationBtn').textContent = 'Dejar de Compartir';
+        document.getElementById('shareLocationBtn').classList.replace('bg-green-500', 'bg-red-500');
+        document.getElementById('shareLocationBtn').classList.replace('hover:bg-green-600', 'hover:bg-red-600');
+    } else {
+        isSharing = false;
+        document.getElementById('shareLocationBtn').textContent = 'Compartir Ubicación';
+        document.getElementById('shareLocationBtn').classList.replace('bg-red-500', 'bg-green-500');
+        document.getElementById('shareLocationBtn').classList.replace('hover:bg-red-600', 'hover:bg-green-600');
+    }
+}
+
+
+
+
+if (userRole) {
     document.getElementById('roleSelection').classList.add('hidden');
     if (userRole === 'user') {
         showMap();
-        document.getElementById('exitBtnContainer').classList.remove('hidden');  // Mostrar botón de salir si es usuario
+        document.getElementById('exitBtnContainer').classList.remove('hidden');  // Mostrar botón de salir solo para usuarios
     } else if (userRole === 'driver') {
         document.getElementById('authButtons').classList.remove('hidden');
         document.getElementById('exitBtnContainer').classList.add('hidden');  // Ocultar botón salir para conductores
@@ -402,6 +458,7 @@ self.addEventListener('fetch', (event) => {
     document.getElementById('exitBtnContainer').classList.add('hidden');
     document.getElementById('mobileTabBar').classList.add('hidden');
 }
+
 
 
 

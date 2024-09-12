@@ -10,7 +10,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/Ruta-15/manifest.json">
     <link rel="icon" href="/favicon.ico">
 
     <style>
@@ -313,13 +313,14 @@ document.getElementById('exitBtn').addEventListener('click', () => {
         }
 
         // Function to handle background sharing using Service Workers (where supported)
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js').then(function (registration) {
+        if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/Ruta-15/service-worker.js').then(function (registration) {
         console.log('Service Worker registered with scope:', registration.scope);
     }).catch(function (error) {
         console.log('Service Worker registration failed:', error);
     });
 }
+
 
 // Background location sharing
 async function startSharingLocationInBackground() {

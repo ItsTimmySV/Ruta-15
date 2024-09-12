@@ -11,6 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/favicon.ico">
     <style>
         body {
             overscroll-behavior-y: contain;
@@ -127,11 +128,15 @@
         let userRole = localStorage.getItem('userRole');
 
         function initMap() {
-            map = L.map('map').setView([13.7942, -88.8965], 8); // Coordenadas de El Salvador
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-        }
+    if (map) {
+        map.remove();  // Eliminar el mapa anterior si ya existe
+    }
+    map = L.map('map').setView([13.7942, -88.8965], 8);  // Coordenadas de El Salvador
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+}
+
 
         function showMap() {
     document.getElementById('mapContainer').classList.remove('hidden');
@@ -167,11 +172,18 @@
 document.getElementById('exitBtn').addEventListener('click', () => {
     userRole = null;
     localStorage.removeItem('userRole');  // Eliminar el rol guardado en localStorage
+
+    if (map) {
+        map.remove();  // Eliminar el mapa antes de salir
+        map = null;  // Asegurar que la referencia al mapa sea nula
+    }
+
     document.getElementById('mapContainer').classList.add('hidden');
     document.getElementById('exitBtnContainer').classList.add('hidden');
     document.getElementById('mobileTabBar').classList.add('hidden');
     document.getElementById('roleSelection').classList.remove('hidden'); // Volver a mostrar la selección de rol
 });
+
 
 
 

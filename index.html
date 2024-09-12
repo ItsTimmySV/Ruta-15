@@ -148,11 +148,12 @@
     if (role === 'driver') {
         document.getElementById('authButtons').classList.remove('hidden');
         document.getElementById('exitBtnContainer').classList.add('hidden'); // Ocultar el botón salir
-    } else {
+    } else if (role === 'user') {
         showMap();
         document.getElementById('exitBtnContainer').classList.remove('hidden'); // Mostrar el botón de salir para usuarios
     }
 }
+
 
 
 document.getElementById('exitBtn').addEventListener('click', () => {
@@ -163,6 +164,7 @@ document.getElementById('exitBtn').addEventListener('click', () => {
     document.getElementById('mobileTabBar').classList.add('hidden');
     document.getElementById('roleSelection').classList.remove('hidden'); // Volver a mostrar la selección de rol
 });
+
 
 
         // Funciones de autenticación
@@ -372,17 +374,17 @@ self.addEventListener('fetch', (event) => {
             }
         });
 
-        // Inicialización
         if (userRole) {
     document.getElementById('roleSelection').classList.add('hidden');
     if (userRole === 'user') {
         showMap();
-        document.getElementById('exitBtnContainer').classList.remove('hidden');  // Mostrar botón de salir si es usuario
+        document.getElementById('exitBtnContainer').classList.remove('hidden');  // Asegurar que el botón de salir esté visible
     } else if (userRole === 'driver') {
         document.getElementById('authButtons').classList.remove('hidden');
         document.getElementById('exitBtnContainer').classList.add('hidden');  // Ocultar botón salir para conductores
     }
 }
+
 
 
 
